@@ -1,0 +1,2 @@
+//import "./instance"
+import "./lifeCircle"
