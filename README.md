@@ -1,4 +1,3 @@
-# myVue
 ## demo-Jsut todo
 ### render方法
 一个组件中的数据发生变化都会重新渲染数据，更新HTML内容。
@@ -1515,6 +1514,87 @@ counter: (state) => {
 })
 ```
 在env的环境下是无法识别这种语法，需要安装babel-preset-stage-1 -D,在bablerc中配置presets数组，"stage-1"
+
+#### mutations同步操作
+有一个问题是在全局下会修改store中的属性。当然最好实在mutations中修改最好。
+```javascript
+this.$store.state.count = 3;
+```
+vue不建议这么修改，则在store中配置strict，只是在开发中使用这个属性规范，生产环境不能这样。
+```javascript
+const isDev = process.env.NODE_ENV === 'development'
+
+export default () => {
+    return new Vuex.Store({
+        strict: isDev,//虽然会修改成功，但是有警告提示，
+        state: defaultState,
+        mutations,
+        getters
+    })
+}
+```
+#### actions异步操作
+```javascript
+export default {
+    updateCountAsync (store, data) {
+        setTimeout(() => {
+            store.commit("updateCount", data.num);
+        }, data.time);
+    }
+}
+```
+store.js中导入注册使用
+在app.vue中使用：
+```javascript
+import {
+  mapState,
+  mapGetters,
+  mapMutations,
+  mapActions
+} from "vuex"
+import Header from './layout/header.vue';
+import Footer from './layout/footer.jsx';
+//import Todo from './views/todo/todo.vue';
+
+export default {
+  components: {
+    Header,
+    Footer
+//    Todo
+  },
+  mounted() {
+    console.log(this.$store);
+    //store对象
+    // let i = 1;
+    // setInterval(() => {
+    //   this.$store.commit("updateCount", i++);
+    // }, 1000);
+    this.$store.dispatch({
+      num: 5,
+      time: 3000
+    })
+  },
+  methods: {//mapAction,mapMutations两个在methods
+    ...mapActions(["updateCountAsync"]),
+    ...mapMutations(["updateCount"])
+  },
+  computed: {
+    ...mapState(['count']),
+    // count() {
+    //   return this.$store.state.count;
+    // },
+    ...mapGetters(['fullName'])
+    // fullName () {
+    //   return this.$store.getters.fullName
+    // }
+  }
+}
+```
+
+
+
+
+
 
 
 

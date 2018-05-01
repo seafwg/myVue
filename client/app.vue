@@ -11,7 +11,9 @@
 <script>
 import {
   mapState,
-  mapGetters
+  mapGetters,
+  mapMutations,
+  mapActions
 } from "vuex"
 import Header from './layout/header.vue';
 import Footer from './layout/footer.jsx';
@@ -26,10 +28,18 @@ export default {
   mounted() {
     console.log(this.$store);
     //store对象
-    let i = 1;
-    setInterval(() => {
-      this.$store.commit("updateCount", i++);
-    }, 1000);
+    // let i = 1;
+    // setInterval(() => {
+    //   this.$store.commit("updateCount", i++);
+    // }, 1000);
+    this.$store.dispatch({
+      num: 5,
+      time: 3000
+    })
+  },
+  methods: {//mapAction,mapMutations两个在methods
+    ...mapActions(["updateCountAsync"]),
+    ...mapMutations(["updateCount"])
   },
   computed: {
     ...mapState(['count']),
