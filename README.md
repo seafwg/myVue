@@ -1439,12 +1439,12 @@ new Vue({
 mounted () {
     console.log(this.$store);
     let i = 1;
-    setInterval(() => {
+    setInterval(() => {//修改：
         this.$store.commit("updateCount", i++)//commit调用一个mutations的方法，updateCount就是传入的mutations里的方法。
     }, 1000);
 },
 computed: {
-    count() {
+    count() {//调用store中的count的方法,可以在文中使用count变量，代替store中的count
         return this.$store.state.count
     }
 }
@@ -1455,7 +1455,7 @@ computed: {
 ```javascript
 import Vuex from 'vuex'
 
-export default () => {
+export default () => {//用方法每次新成，利于服务器的渲染
     return new Vuex.Store({//返回新创建的对象
         state: {
             count: 0
@@ -1475,19 +1475,51 @@ import createStore from './store.store'
 
 Vue.use(Vuex); 
 
-const store = createStore();//更好地维护代码
+const store = createStore();//更好地维护代码，和 router用法相同
 
 ```
 #### vuex中的state和getters
 分模块的组建store:
 在store文件下新建对应的模块文件，state,mutations分别暴露出去即可，getters.js(类似与computers计算state中的属性)在一处写之后每处都可以使用。
-在app.vue的computed方法中：
+专门新建state.js用来维护state的存储。
+```javascript
+export default {
+    count: 0
+    //...
+}
+```
+在store.js中导入使用
+```javascript
+import Vuex from 'vuex'
+import defaultState from './state'
+export default () => {
+    return new Vuex.Store({
+        state: defaultState,
+        mutations: {
+            //...
+        }
+    });
+}
+```
+同样的muations对象也可以这样分模块...
+
+####getters:
+同样的新建getter.js
+```javascript
+export default {
+    fullName (state) {//接受state参数，return state中的数据
+        return `${state.firstName},${state.lastName}`;
+        
+    }
+}
+```
+在app.vue的computed方法中：定义fullName,可用于数据的渲染。
 ```javascript
 computed: {
     count() {
         return this.$store.state.count;
     },
-    fullName () {
+    fullName () {//同样调用fullName,
         return this.$store.getters.fullName
     }
 }
@@ -1500,26 +1532,45 @@ import {
 } from 'vuex'
 
 computed: {
-    ...mapState(['count']);
+    ...mapState(['count']);//stste的名字
+    <=>
+    count() {
+        return this.$store.state.count;
+    }
 }
 
-...mapState({
+...mapState({//传递对象
     counter: 'count'
 })
 
-...mapState({
-counter: (state) => {
+...mapState({//传递方法
+    counter: (state) => {
         state.count;//可以实现计算
     }
 })
+//getters使用方法相同
+...mapGetters(["fullName"]);
 ```
 在env的环境下是无法识别这种语法，需要安装babel-preset-stage-1 -D,在bablerc中配置presets数组，"stage-1"
 
 #### mutations同步操作
-有一个问题是在全局下会修改store中的属性。当然最好实在mutations中修改最好。
+在mutations中只能传递两个参数，第二个参数可以传递对象
 ```javascript
-this.$store.state.count = 3;
+this.$store.commit('updateCount', {//传递两个数据组成的对象
+    num1: i++,
+    num2: 3
+});
 ```
+mutations.js中：
+```javascript
+export default {
+    updateCount(state, {num1, num2});//解构
+    //所有修改state的方法
+}
+```
+
+有一个问题是在全局下会修改store中的属性。当然最好实在mutations中修改最好，这样代码很规范，可以在store.js中配置strict: true配置此属性，但是不能在正式环境中使用。
+
 vue不建议这么修改，则在store中配置strict，只是在开发中使用这个属性规范，生产环境不能这样。
 ```javascript
 const isDev = process.env.NODE_ENV === 'development'
@@ -1533,10 +1584,12 @@ export default () => {
     })
 }
 ```
+要规范的使用store,在mutations中修改数据，如果在外面任意的修改则使用vuex的意义不是很好。
+
 #### actions异步操作
 ```javascript
 export default {
-    updateCountAsync (store, data) {
+    updateCountAsync (store, data) {//data触发传入的参数
         setTimeout(() => {
             store.commit("updateCount", data.num);
         }, data.time);
@@ -1565,18 +1618,25 @@ export default {
   mounted() {
     console.log(this.$store);
     //store对象
-    // let i = 1;
-    // setInterval(() => {
-    //   this.$store.commit("updateCount", i++);
-    // }, 1000);
-    this.$store.dispatch({
+    let i = 1;
+    setInterval(() => {
+       this.updateCount({i++});
+    }, 1000);
+    this.$store.dispatch('updateCountAsync', {//专门触发actions
       num: 5,
       time: 3000
     })
+    <=>
+    this.updateCountAsync({
+        num: 5,
+        time: 2000
+    });
   },
   methods: {//mapAction,mapMutations两个在methods
     ...mapActions(["updateCountAsync"]),
     ...mapMutations(["updateCount"])
+    //传入之后在mounted中
+    //this.updateCountAsync代替this.store.dispatch
   },
   computed: {
     ...mapState(['count']),
@@ -1590,9 +1650,94 @@ export default {
   }
 }
 ```
+### Vuex模块功能
+在store.js中新增modules对象，进行配置模块
+```javascript
+const isDev = process.env.NODE_ENV === 'development'
 
+export default () => {
+    return new Vuex.Store({
+        strict: isDev,//虽然会修改成功，但是有警告提示，
+        state: defaultState,
+        mutations,
+        getters,
+        actions,
+        modules: {
+            namespace: true,
+            a: {
+                state: {
+                    text: 1
+                },
+                mutations: {
+                    updateText(state, text) {
+                        state.text = text;
+                    }
+                },
+                getters: {
+                    textPlus(state) {
+                        return state.text + 1;
+                    }
+                }
+            },
+            b: {
+                state: {
+                    text: 2
+                }
+            }
+        }
+    })
+}
+```
+使用在app.vue中：
+```javascript
+computed: {
+    textA () {//通过模块的命名空间
+        return this.$store.state.a.text
+    }
+    <=>
+    ...mapState({
+        textA: state => state.a.text
+        //...
+    })
+    //模块mutations的使用  
+    ...mapMutations(['updateText','...']);
+    //接着在mounted中调用
 
+    
+}
+mounted() {
+    this.updateText("xxx");//注意没有命名空间的引用，vue默认把所有的mutations放到全局的mutations中，声明namespace: true，可防止命名冲突，这样在每个模块中可以写相同的方法.这样写要添加命名空间，
+    ...mapMutations(['a/updateText','...']);
+    //mounted 中的使用
+    this['a/updateText']('xxx');
 
+    ...mapGetters(['a/textPlus'])
+    this['a/textPlus']
+
+    //可以用对象的形式进行简写
+    ...mapGetters({
+        'fullNem': 'fullName',
+        'textPlus': 'a/textPlus'
+    })
+}
+```
+如果模块中的getters或者其他方法依赖上一层的state
+```javascript
+a: {
+    ...
+    getters: {
+        textPlus(state, getters, rootState) {
+        //state:模块中的state,getters: 所有的getters方法，rootState全局的state
+            return state.text + rootState.coount;
+            //当然也可以拿到其他模块的state
+            rootState.b.text;
+        }
+    },
+    actions: {//4-8: 10:00
+        add(ctx,) {}
+    }
+}
+```
 
 
 

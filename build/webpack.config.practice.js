@@ -37,7 +37,8 @@ config = merge(baseConfig, {//合并到baseConfig文件中
                         loader: "css-loader",
                         options: {
                             module: true,
-                            localIdentName: "[path]-[name]-[hash:base64:5]"                        }
+                            localIdentName: "[path]-[name]-[hash:base64:5]"
+                        }
                     },
                     {
                         loader: 'postcss-loader',

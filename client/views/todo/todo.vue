@@ -19,24 +19,33 @@
       @toggle="toggleFilter"
       @clearAllCompleted="clearAllCompleted"
     />
+    <div @click="testBus">{{markers}}</div>
   </section>
 </template>
 
 <script>
 import Item from './item.vue'
 import Tabs from './tabs.vue'
-let id = 0
+import bus from '../eventBus'
+let id = 0;
+
 export default {
   data() {
     return {
       todos: [],
-      filter: 'all'
+      filter: 'all',
+      markers: 9999
     }
   },
   components: {
     Item,
     Tabs,
   },
+  // created() {
+  //   Bud.$on('sendMSG', (content) => {
+  //     this.markers = content;
+  //   });
+  // },
   computed: {
     filteredTodos() {
       if (this.filter === 'all') {
@@ -64,6 +73,9 @@ export default {
     },
     clearAllCompleted() {
       this.todos = this.todos.filter(todo => !todo.completed)
+    },
+    testBus() {
+      bus.$emit('testBus', this.markers)
     }
   }
 }
